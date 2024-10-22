@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task Manager</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="icon" href="/images/favicon_image_for_chrom_page.jpeg">
 </head>
 <body>
     <div class="container mt-5">
@@ -55,13 +56,18 @@
                             <td><%= task.description %></td>
                             <td>
                                 <form action="/tasks/<%= task._id %>?_method=PUT" method="POST" class="d-inline">
-                                    <select name="status" class="custom-select" onchange="this.form.submit()">
+                                    <select name="status" class="custom-select status-select" onchange="this.form.submit(); updateSelectColor(this)">
                                         <option value="Pending" <%= task.status === 'Pending' ? 'selected' : '' %>>Pending</option>
                                         <option value="Completed" <%= task.status === 'Completed' ? 'selected' : '' %>>Completed</option>
                                     </select>
                                 </form>
                             </td>
                             <td>
+                                <!-- Edit Task Button -->
+                                 <div class="d-flex justify-content-between mt-3">
+                                    <button class="btn btn-warning" style="width: 70px;" onclick="editTaskDescription('<%= task._id %>', '<%= task.description %>')">Edit</button>
+                                </div>
+                                 <br>
                                 <form action="/tasks/<%= task._id %>?_method=DELETE" method="POST" class="d-inline">
                                     <button class="btn btn-danger" type="submit">Delete</button>
                                 </form>
@@ -95,6 +101,101 @@
             </ul>
         </nav>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Check URL query parameters for task actions and show corresponding alerts
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (urlParams.has('task_added')) {
+            Swal.fire({
+                title: 'Success!',
+                text: 'Task added successfully!',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        if (urlParams.has('task_updated')) {
+            Swal.fire({
+                title: 'Success!',
+                text: 'Task status updated successfully!',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        if (urlParams.has('task_deleted')) {
+            Swal.fire({
+                title: 'Deleted!',
+                text: 'Task deleted successfully!',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        if (urlParams.has('task_description_updated')) {
+            Swal.fire({
+                title: 'Updated!',
+                text: 'Task description updated successfully!',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        }
+    </script>
+   <script>
+    // Function to trigger SweetAlert for editing a task description
+    function editTaskDescription(taskId, currentDescription) {
+        Swal.fire({
+            title: 'Edit Task Description',
+            input: 'text',
+            inputValue: currentDescription, // Pre-fill the input with the current description
+            inputAttributes: {
+                autocapitalize: 'off'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Update',
+            showLoaderOnConfirm: true,
+            preConfirm: async (newDescription) => {
+                if (!newDescription) {
+                    Swal.showValidationMessage('You must enter a description!');
+                    return;
+                }
+                try {
+                    const response = await fetch(`/tasks/${taskId}/description`, {
+                        method: 'PUT', // Use PUT to update the task description
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ description: newDescription }) // Send new description
+                    });
+                    if (!response.ok) {
+                        return Swal.showValidationMessage('Failed to update description.');
+                    }
+                    return response.json();
+                } catch (error) {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                }
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Updated!',
+                    text: 'Task description updated successfully!',
+                    icon: 'success'
+                });
+                
+                // Optionally, update the task description in the DOM without reloading
+                const taskRow = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskRow) {
+                    taskRow.querySelector('.task-description').textContent = newDescription; // Update the description
+                }
+            }
+        });
+    }
+</script>
+
     
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
@@ -105,6 +206,18 @@
             document.querySelector('input[name="search"]').value = '';
             document.querySelector('form').submit(); // Submit the form to refresh the page
         }
+        function updateSelectColor(selectElement) {
+            if (selectElement.value === "Pending") {
+                selectElement.style.color = "red";
+            } else if (selectElement.value === "Completed") {
+                selectElement.style.color = "green";
+            }
+        }
+
+            // Initial setup to set the color when the page loads
+            document.querySelectorAll('.status-select').forEach(select => {
+            updateSelectColor(select);
+        });
     </script>
 </body>
 </html>
